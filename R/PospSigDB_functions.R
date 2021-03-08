@@ -47,12 +47,48 @@ write_gmt <- function(title, description, genes, path=".") {
 
 
 
+## Function to read .rnk file
+## returns rnk list formatted for use within R.
+read_RNK <- function(rnk_file) {
+  x <- read.delim(file = rnk_file, sep = "\t")
+  print(colnames(x)[1])
+  rnk_stat <- x[,2]
+  names(rnk_stat) <- x[,1]
+  rnk_stat <- rnk_stat[order(rnk_stat, decreasing = T)]
+  return(rnk_stat)
+}
 
 
 
-
-
-
+## Function from NixSEA to write .rnk file
+## Writes description of gene set in first row since it will be ignored
+write_RNK <- function (file, RNK_file, description="gene", species = "Human")
+{
+  if ((species %in% c("Human", "Mouse")) == FALSE) {
+    stop("Species must be 'Human' or 'Mouse'.")
+  }
+  spec_dataset <- if (species == "Human") {
+    "hsapiens_gene_ensembl"
+  }
+  else if (species == "Mouse") {
+    "mmusculus_gene_ensembl"
+  }
+  symbol <- if (species == "Human") {
+    "hgnc_symbol"
+  }
+  else if (species == "Mouse") {
+    "mgi_symbol"
+  }
+  ensembl = useMart("ensembl", dataset = spec_dataset)
+  genemap <- getBM(attributes = c("ensembl_gene_id", "entrezgene_id",
+                                  symbol), filters = "entrezgene_id", values = names(RNK_file),
+                   mart = ensembl)
+  idx <- match(names(RNK_file), genemap$entrezgene_id)
+  conv_syms <- genemap[, which(colnames(genemap) == symbol)][idx]
+  wRNK <- data.frame(description = conv_syms, stat = RNK_file)
+  write.table(wRNK, file, quote = F, sep = "\t", eol = "\r",
+              row.names = F)
+}
 
 
 
